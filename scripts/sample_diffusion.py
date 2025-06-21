@@ -18,9 +18,15 @@ def custom_to_pil(x):
     x = (x + 1.) / 2.
     x = x.permute(1, 2, 0).numpy()
     x = (255 * x).astype(np.uint8)
-    x = Image.fromarray(x)
-    if not x.mode == "RGB":
-        x = x.convert("RGB")
+    
+    # Handle grayscale images
+    if x.shape[-1] == 1:
+        x = x.squeeze(-1)  # Remove channel dimension for grayscale
+        x = Image.fromarray(x, mode='L')
+    else:
+        x = Image.fromarray(x)
+        if not x.mode == "RGB":
+            x = x.convert("RGB")
     return x
 
 
