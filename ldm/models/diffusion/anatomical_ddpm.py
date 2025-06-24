@@ -89,7 +89,9 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         """
         # Get current global step for progressive training
         if hasattr(self, 'global_step'):
-            self.anatomical_training_step = self.global_step
+            # Update the buffer with current step
+            with torch.no_grad():
+                self.anatomical_training_step.copy_(torch.tensor(self.global_step, device=self.device))
         
         # Standard diffusion forward
         t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()
