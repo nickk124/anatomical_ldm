@@ -83,9 +83,16 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
                                        hasattr(self.model.diffusion_model, 'use_anatomical_registers') and \
                                        self.model.diffusion_model.use_anatomical_registers
         
+        print(f"DEBUG: Checking anatomical registers...")
+        print(f"DEBUG: UNet class is {type(self.model.diffusion_model)}")
+        print(f"DEBUG: isinstance check: {isinstance(self.model.diffusion_model, AnatomicalUNetModel)}")
+        print(f"DEBUG: has use_anatomical_registers: {hasattr(self.model.diffusion_model, 'use_anatomical_registers')}")
+        if hasattr(self.model.diffusion_model, 'use_anatomical_registers'):
+            print(f"DEBUG: use_anatomical_registers value: {self.model.diffusion_model.use_anatomical_registers}")
+        print(f"DEBUG: Final has_anatomical_registers: {self.has_anatomical_registers}")
+        
         if not self.has_anatomical_registers:
             print("Warning: UNet does not have anatomical registers enabled. Anatomical features will be disabled.")
-            print(f"DEBUG: UNet class is {type(self.model.diffusion_model)}")
     
     def forward(self, x, c, *args, **kwargs):
         """
@@ -156,16 +163,20 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         loss += (self.original_elbo_weight * loss_vlb)
         
         # Add anatomical loss with progressive weighting
+        print(f"DEBUG p_losses: has_anatomical_registers={self.has_anatomical_registers}, anatomical_loss={anatomical_loss}")
         if self.has_anatomical_registers and anatomical_loss > 0:
             anatomical_weight = self.get_anatomical_loss_weight()
             weighted_anatomical_loss = anatomical_loss * anatomical_weight
             loss += weighted_anatomical_loss
+            print(f"DEBUG: Adding anatomical loss - weight={anatomical_weight}, weighted_loss={weighted_anatomical_loss}")
             
             loss_dict.update({
                 f'{prefix}/anatomical_loss': anatomical_loss,
                 f'{prefix}/anatomical_weight': anatomical_weight,
                 f'{prefix}/weighted_anatomical_loss': weighted_anatomical_loss
             })
+        else:
+            print(f"DEBUG: NOT adding anatomical loss - registers={self.has_anatomical_registers}, loss={anatomical_loss}")
         
         loss_dict.update({f'{prefix}/loss': loss})
         
@@ -207,21 +218,34 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         if self.has_anatomical_registers:
             # Call anatomical UNet - check if it accepts target_masks
             try:
-                output, anatomical_loss = self.model(x_noisy, t, **cond, target_masks=target_masks)
-                if return_ids:
+                result = self.model(x_noisy, t, **cond, target_masks=target_masks)
+                print(f"DEBUG apply_model: model returned {type(result)}, len={len(result) if isinstance(result, (tuple, list)) else 'N/A'}")
+                if isinstance(result, tuple) and len(result) == 2:
+                    output, anatomical_loss = result
+                    print(f"DEBUG apply_model: extracted output shape={output.shape}, anatomical_loss={anatomical_loss}")
+                    if return_ids:
+                        return output, anatomical_loss
                     return output, anatomical_loss
-                return output, anatomical_loss
+                else:
+                    print(f"DEBUG apply_model: unexpected result format, treating as output only")
+                    output = result
+                    anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
+                    return output, anatomical_loss
             except TypeError as e:
                 if "target_masks" in str(e):
+                    print(f"DEBUG apply_model: target_masks not accepted, calling without")
                     # Model doesn't accept target_masks, call without it
                     output = self.model(x_noisy, t, **cond)
-                    return output
+                    anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
+                    return output, anatomical_loss
                 else:
                     raise e
         else:
             # Fall back to standard UNet
+            print(f"DEBUG apply_model: no anatomical registers, using standard UNet")
             output = self.model(x_noisy, t, **cond)
-            return output
+            anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
+            return output, anatomical_loss
     
     @torch.no_grad()
     def get_input(self, batch, k, return_first_stage_outputs=False, force_c_encode=False,
@@ -323,14 +347,14 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
             x, c, *rest = self.get_input(batch, self.first_stage_key, return_anatomical_masks=True)
             anatomical_masks = rest[-1] if rest else None
             
-            # Forward pass with anatomical supervision
-            loss = self(x, c, target_masks=anatomical_masks)
+            # Forward pass with anatomical supervision - returns (loss, loss_dict)
+            loss, loss_dict = self(x, c, target_masks=anatomical_masks)
+            return loss, loss_dict
         else:
             # Standard training without anatomical features
             x, c = self.get_input(batch, self.first_stage_key)
             loss = self(x, c)
-        
-        return loss
+            return loss
     
     @torch.no_grad()
     def sample(self, cond=None, batch_size=16, return_intermediates=False, x_T=None,
