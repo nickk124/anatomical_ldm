@@ -216,7 +216,7 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         Enhanced get_input that handles anatomical masks.
         """
         # Standard input processing
-        x = super().get_input(batch, k)
+        x = batch[k]
         if bs is not None:
             x = x[:bs]
         x = x.to(self.device)
@@ -233,7 +233,9 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
                 elif cond_key == 'class_label':
                     xc = batch
                 else:
-                    xc = super().get_input(batch, cond_key).to(self.device)
+                    xc = batch[cond_key]
+                    if isinstance(xc, torch.Tensor):
+                        xc = xc.to(self.device)
             else:
                 xc = x
             
