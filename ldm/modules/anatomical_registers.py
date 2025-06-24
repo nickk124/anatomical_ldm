@@ -86,7 +86,12 @@ class AnatomicalRegisterBank(nn.Module):
         # Add spatial encoding if enabled
         if self.use_spatial_encoding:
             spatial_info = self.spatial_encoder(batch_size, device)
-            registers = registers + spatial_info
+            # spatial_info shape: [batch_size, spatial_size^2, register_dim]
+            # registers shape: [batch_size, total_registers, register_dim]
+            # We need to make them compatible - take mean spatial info for each register
+            spatial_summary = spatial_info.mean(dim=1, keepdim=True)  # [batch_size, 1, register_dim]
+            spatial_summary = spatial_summary.expand(-1, registers.shape[1], -1)  # [batch_size, total_registers, register_dim]
+            registers = registers + spatial_summary
         
         # Apply layer norm
         registers = self.norm(registers)
