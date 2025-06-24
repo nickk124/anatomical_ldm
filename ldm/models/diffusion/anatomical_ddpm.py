@@ -353,8 +353,16 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         else:
             # Standard training without anatomical features
             x, c = self.get_input(batch, self.first_stage_key)
-            loss = self(x, c)
-            return loss
+            result = self(x, c)
+            if isinstance(result, tuple) and len(result) == 2:
+                loss, loss_dict = result
+                return loss, loss_dict
+            else:
+                # If forward only returns loss, create minimal loss_dict
+                loss = result
+                prefix = 'train' if self.training else 'val'
+                loss_dict = {f'{prefix}/loss': loss}
+                return loss, loss_dict
     
     @torch.no_grad()
     def sample(self, cond=None, batch_size=16, return_intermediates=False, x_T=None,
