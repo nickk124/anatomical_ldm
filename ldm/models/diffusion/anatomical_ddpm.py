@@ -125,10 +125,11 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
         
         # Apply model with anatomical context
-        if self.has_anatomical_registers:
-            model_output, anatomical_loss = self.apply_model(x_noisy, t, cond, target_masks=target_masks)
+        result = self.apply_model(x_noisy, t, cond, target_masks=target_masks)
+        if isinstance(result, tuple) and len(result) == 2:
+            model_output, anatomical_loss = result
         else:
-            model_output = self.apply_model(x_noisy, t, cond)
+            model_output = result
             anatomical_loss = torch.tensor(0.0, device=x_start.device)
         
         loss_dict = {}
