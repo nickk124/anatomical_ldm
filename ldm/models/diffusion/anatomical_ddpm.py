@@ -217,9 +217,25 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         """
         # Standard input processing
         x = batch[k]
+        
+        # Debug print to understand the shape issue
+        if hasattr(self, '_debug_printed') is False:
+            print(f"DEBUG: batch[{k}] shape: {x.shape}")
+            print(f"DEBUG: batch keys: {batch.keys()}")
+            self._debug_printed = True
+            
         if bs is not None:
             x = x[:bs]
         x = x.to(self.device)
+        
+        # Ensure correct shape for medical images (add channel dim if needed)
+        if x.dim() == 3:  # [B, H, W] -> [B, 1, H, W]
+            x = x.unsqueeze(1)
+        elif x.dim() == 4 and x.shape[1] > 1:
+            # If we have multiple channels but encoder expects 1, take first channel
+            if hasattr(self.first_stage_model.encoder, 'conv_in') and self.first_stage_model.encoder.conv_in.in_channels == 1:
+                x = x[:, 0:1, :, :]
+        
         encoder_posterior = self.encode_first_stage(x)
         z = self.get_first_stage_encoding(encoder_posterior).detach()
         
