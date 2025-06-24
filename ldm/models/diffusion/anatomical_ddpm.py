@@ -77,11 +77,15 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         self.register_buffer("anatomical_training_step", torch.tensor(0))
         
         # Check if model has anatomical registers
-        self.has_anatomical_registers = hasattr(self.model.diffusion_model, 'use_anatomical_registers') and \
+        from ldm.modules.diffusionmodules.anatomical_openaimodel import AnatomicalUNetModel
+        
+        self.has_anatomical_registers = isinstance(self.model.diffusion_model, AnatomicalUNetModel) and \
+                                       hasattr(self.model.diffusion_model, 'use_anatomical_registers') and \
                                        self.model.diffusion_model.use_anatomical_registers
         
         if not self.has_anatomical_registers:
             print("Warning: UNet does not have anatomical registers enabled. Anatomical features will be disabled.")
+            print(f"DEBUG: UNet class is {type(self.model.diffusion_model)}")
     
     def forward(self, x, c, *args, **kwargs):
         """
@@ -201,11 +205,19 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
             cond = {key: cond}
         
         if self.has_anatomical_registers:
-            # Call anatomical UNet
-            output, anatomical_loss = self.model(x_noisy, t, **cond, target_masks=target_masks)
-            if return_ids:
+            # Call anatomical UNet - check if it accepts target_masks
+            try:
+                output, anatomical_loss = self.model(x_noisy, t, **cond, target_masks=target_masks)
+                if return_ids:
+                    return output, anatomical_loss
                 return output, anatomical_loss
-            return output, anatomical_loss
+            except TypeError as e:
+                if "target_masks" in str(e):
+                    # Model doesn't accept target_masks, call without it
+                    output = self.model(x_noisy, t, **cond)
+                    return output
+                else:
+                    raise e
         else:
             # Fall back to standard UNet
             output = self.model(x_noisy, t, **cond)
