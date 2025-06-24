@@ -232,30 +232,33 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
             cond = {key: cond}
         
         if self.has_anatomical_registers:
-            # Call anatomical UNet - check if it accepts target_masks
-            try:
-                result = self.model(x_noisy, t, **cond, target_masks=target_masks)
-                print(f"DEBUG apply_model: model returned {type(result)}, len={len(result) if isinstance(result, (tuple, list)) else 'N/A'}")
-                if isinstance(result, tuple) and len(result) == 2:
-                    output, anatomical_loss = result
-                    print(f"DEBUG apply_model: extracted output shape={output.shape}, anatomical_loss={anatomical_loss}")
-                    if return_ids:
-                        return output, anatomical_loss
+            # Call anatomical UNet directly, bypassing LatentDiffusion wrapper
+            print(f"DEBUG apply_model: calling diffusion_model directly with target_masks")
+            
+            # Prepare context for the UNet
+            context = None
+            if cond:
+                if 'c_crossattn' in cond:
+                    context = cond['c_crossattn'][0] if isinstance(cond['c_crossattn'], list) else cond['c_crossattn']
+                elif 'c_concat' in cond:
+                    # For concat conditioning, we'd need to handle differently
+                    context = cond['c_concat'][0] if isinstance(cond['c_concat'], list) else cond['c_concat']
+            
+            # Call UNet directly with target_masks
+            result = self.model.diffusion_model(x_noisy, timesteps=t, context=context, target_masks=target_masks)
+            print(f"DEBUG apply_model: diffusion_model returned {type(result)}, len={len(result) if isinstance(result, (tuple, list)) else 'N/A'}")
+            
+            if isinstance(result, tuple) and len(result) == 2:
+                output, anatomical_loss = result
+                print(f"DEBUG apply_model: extracted output shape={output.shape}, anatomical_loss={anatomical_loss}")
+                if return_ids:
                     return output, anatomical_loss
-                else:
-                    print(f"DEBUG apply_model: unexpected result format, treating as output only")
-                    output = result
-                    anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
-                    return output, anatomical_loss
-            except TypeError as e:
-                if "target_masks" in str(e):
-                    print(f"DEBUG apply_model: target_masks not accepted, calling without")
-                    # Model doesn't accept target_masks, call without it
-                    output = self.model(x_noisy, t, **cond)
-                    anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
-                    return output, anatomical_loss
-                else:
-                    raise e
+                return output, anatomical_loss
+            else:
+                print(f"DEBUG apply_model: single tensor returned, no anatomical loss")
+                output = result
+                anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
+                return output, anatomical_loss
         else:
             # Fall back to standard UNet
             print(f"DEBUG apply_model: no anatomical registers, using standard UNet")
