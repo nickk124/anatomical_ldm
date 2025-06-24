@@ -119,7 +119,7 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         
         # Apply model with anatomical context
         result = self.apply_model(x_noisy, t, cond, target_masks=target_masks)
-        if isinstance(result, tuple) and len(result) == 2:
+        if self.training and isinstance(result, tuple) and len(result) == 2:
             model_output, anatomical_loss = result
         else:
             model_output = result
@@ -228,18 +228,27 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
             
             if isinstance(result, tuple) and len(result) == 2:
                 output, anatomical_loss = result
-                if return_ids:
+                # During inference (sampling), only return the output
+                # During training, return both output and loss
+                if self.training:
                     return output, anatomical_loss
-                return output, anatomical_loss
+                else:
+                    return output
             else:
                 output = result
                 anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
-                return output, anatomical_loss
+                if self.training:
+                    return output, anatomical_loss
+                else:
+                    return output
         else:
             # Fall back to standard UNet
             output = self.model(x_noisy, t, **cond)
-            anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
-            return output, anatomical_loss
+            if self.training:
+                anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
+                return output, anatomical_loss
+            else:
+                return output
     
     @torch.no_grad()
     def get_input(self, batch, k, return_first_stage_outputs=False, force_c_encode=False,
