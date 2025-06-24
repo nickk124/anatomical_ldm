@@ -126,11 +126,26 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         
         # Apply model with anatomical context
         result = self.apply_model(x_noisy, t, cond, target_masks=target_masks)
+        print(f"DEBUG p_losses: apply_model result type={type(result)}, len={len(result) if isinstance(result, (tuple, list)) else 'N/A'}")
         if isinstance(result, tuple) and len(result) == 2:
             model_output, anatomical_loss = result
+            print(f"DEBUG p_losses: unpacked model_output type={type(model_output)}, anatomical_loss type={type(anatomical_loss)}")
         else:
             model_output = result
             anatomical_loss = torch.tensor(0.0, device=x_start.device)
+            print(f"DEBUG p_losses: using result directly, model_output type={type(model_output)}")
+        
+        print(f"DEBUG p_losses: final model_output type={type(model_output)}, shape={model_output.shape if hasattr(model_output, 'shape') else 'no shape'}")
+        
+        # Defensive check - ensure model_output is a tensor
+        while isinstance(model_output, (tuple, list)) and len(model_output) > 0:
+            print(f"DEBUG p_losses: model_output is {type(model_output)}, unwrapping first element")
+            model_output = model_output[0]
+        
+        if not isinstance(model_output, torch.Tensor):
+            raise ValueError(f"model_output should be a tensor, got {type(model_output)}")
+        
+        print(f"DEBUG p_losses: after unwrapping, model_output type={type(model_output)}, shape={model_output.shape}")
         
         loss_dict = {}
         prefix = 'train' if self.training else 'val'
