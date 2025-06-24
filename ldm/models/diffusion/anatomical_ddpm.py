@@ -83,13 +83,6 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
                                        hasattr(self.model.diffusion_model, 'use_anatomical_registers') and \
                                        self.model.diffusion_model.use_anatomical_registers
         
-        print(f"DEBUG: Checking anatomical registers...")
-        print(f"DEBUG: UNet class is {type(self.model.diffusion_model)}")
-        print(f"DEBUG: isinstance check: {isinstance(self.model.diffusion_model, AnatomicalUNetModel)}")
-        print(f"DEBUG: has use_anatomical_registers: {hasattr(self.model.diffusion_model, 'use_anatomical_registers')}")
-        if hasattr(self.model.diffusion_model, 'use_anatomical_registers'):
-            print(f"DEBUG: use_anatomical_registers value: {self.model.diffusion_model.use_anatomical_registers}")
-        print(f"DEBUG: Final has_anatomical_registers: {self.has_anatomical_registers}")
         
         if not self.has_anatomical_registers:
             print("Warning: UNet does not have anatomical registers enabled. Anatomical features will be disabled.")
@@ -126,26 +119,18 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         
         # Apply model with anatomical context
         result = self.apply_model(x_noisy, t, cond, target_masks=target_masks)
-        print(f"DEBUG p_losses: apply_model result type={type(result)}, len={len(result) if isinstance(result, (tuple, list)) else 'N/A'}")
         if isinstance(result, tuple) and len(result) == 2:
             model_output, anatomical_loss = result
-            print(f"DEBUG p_losses: unpacked model_output type={type(model_output)}, anatomical_loss type={type(anatomical_loss)}")
         else:
             model_output = result
             anatomical_loss = torch.tensor(0.0, device=x_start.device)
-            print(f"DEBUG p_losses: using result directly, model_output type={type(model_output)}")
-        
-        print(f"DEBUG p_losses: final model_output type={type(model_output)}, shape={model_output.shape if hasattr(model_output, 'shape') else 'no shape'}")
         
         # Defensive check - ensure model_output is a tensor
         while isinstance(model_output, (tuple, list)) and len(model_output) > 0:
-            print(f"DEBUG p_losses: model_output is {type(model_output)}, unwrapping first element")
             model_output = model_output[0]
         
         if not isinstance(model_output, torch.Tensor):
             raise ValueError(f"model_output should be a tensor, got {type(model_output)}")
-        
-        print(f"DEBUG p_losses: after unwrapping, model_output type={type(model_output)}, shape={model_output.shape}")
         
         loss_dict = {}
         prefix = 'train' if self.training else 'val'
@@ -179,20 +164,16 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         loss += (self.original_elbo_weight * loss_vlb)
         
         # Add anatomical loss with progressive weighting
-        print(f"DEBUG p_losses: has_anatomical_registers={self.has_anatomical_registers}, anatomical_loss={anatomical_loss}")
         if self.has_anatomical_registers and anatomical_loss > 0:
             anatomical_weight = self.get_anatomical_loss_weight()
             weighted_anatomical_loss = anatomical_loss * anatomical_weight
             loss += weighted_anatomical_loss
-            print(f"DEBUG: Adding anatomical loss - weight={anatomical_weight}, weighted_loss={weighted_anatomical_loss}")
             
             loss_dict.update({
                 f'{prefix}/anatomical_loss': anatomical_loss,
                 f'{prefix}/anatomical_weight': anatomical_weight,
                 f'{prefix}/weighted_anatomical_loss': weighted_anatomical_loss
             })
-        else:
-            print(f"DEBUG: NOT adding anatomical loss - registers={self.has_anatomical_registers}, loss={anatomical_loss}")
         
         loss_dict.update({f'{prefix}/loss': loss})
         
@@ -233,8 +214,6 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         
         if self.has_anatomical_registers:
             # Call anatomical UNet directly, bypassing LatentDiffusion wrapper
-            print(f"DEBUG apply_model: calling diffusion_model directly with target_masks")
-            
             # Prepare context for the UNet
             context = None
             if cond:
@@ -246,22 +225,18 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
             
             # Call UNet directly with target_masks
             result = self.model.diffusion_model(x_noisy, timesteps=t, context=context, target_masks=target_masks)
-            print(f"DEBUG apply_model: diffusion_model returned {type(result)}, len={len(result) if isinstance(result, (tuple, list)) else 'N/A'}")
             
             if isinstance(result, tuple) and len(result) == 2:
                 output, anatomical_loss = result
-                print(f"DEBUG apply_model: extracted output shape={output.shape}, anatomical_loss={anatomical_loss}")
                 if return_ids:
                     return output, anatomical_loss
                 return output, anatomical_loss
             else:
-                print(f"DEBUG apply_model: single tensor returned, no anatomical loss")
                 output = result
                 anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
                 return output, anatomical_loss
         else:
             # Fall back to standard UNet
-            print(f"DEBUG apply_model: no anatomical registers, using standard UNet")
             output = self.model(x_noisy, t, **cond)
             anatomical_loss = torch.tensor(0.0, device=x_noisy.device)
             return output, anatomical_loss
@@ -275,11 +250,6 @@ class AnatomicalLatentDiffusion(LatentDiffusion):
         # Standard input processing
         x = batch[k]
         
-        # Debug print to understand the shape issue
-        if hasattr(self, '_debug_printed') is False:
-            print(f"DEBUG: batch[{k}] shape: {x.shape}")
-            print(f"DEBUG: batch keys: {batch.keys()}")
-            self._debug_printed = True
             
         if bs is not None:
             x = x[:bs]
