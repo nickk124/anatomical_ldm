@@ -275,8 +275,10 @@ if __name__ == "__main__":
     base_configs = sorted(glob.glob(os.path.join(logdir, "config.yaml")))
     if len(base_configs) == 0:
         # my fix for their bug
-        proj_label = logdir.split(os.sep)[-1].split("_")[0]
-        base_configs = sorted(glob.glob(os.path.join(logdir, "configs", "{}-project.yaml".format(proj_label))))
+        proj_label = opt.logdir.split(os.sep)[-1].split("_")[0]
+        print(os.path.join(opt.logdir, "configs", "{}-project.yaml".format(proj_label)))
+        base_configs = sorted(glob.glob(os.path.join(
+            opt.logdir, "configs", "{}-project.yaml".format(proj_label))))
     opt.base = base_configs
 
     configs = [OmegaConf.load(cfg) for cfg in opt.base]
