@@ -139,25 +139,7 @@ class CTOrganTest(MedicalImagesBase):
 class CTOrganSmallTrain(MedicalImagesBase):
     def __init__(self, **kwargs):
         super().__init__(
-            data_root="../../other_data/ct_organ/images/train",
-            segmentation_root="../../other_data/ct_organ/masks/all/train",
-            n_labels=6,
-            **kwargs)
-
-
-class CTOrganSmallValidation(MedicalImagesBase):
-    def __init__(self, **kwargs):
-        super().__init__(
-            data_root="../../other_data/ct_organ/images/val",
-            segmentation_root="../../other_data/ct_organ/masks/all/val",
-            n_labels=6,
-            **kwargs)
-
-
-class CTOrganSmallTest(MedicalImagesBase):
-    def __init__(self, **kwargs):
-        super().__init__(
-            data_root="../../other_data/ct_organ/images/test",
-            segmentation_root="../../other_data/ct_organ/masks/all/test",
+            data_root="../../other_data/ct_organ/images/train_subset_100",
+            segmentation_root="../../other_data/ct_organ/masks/all/train_subset_100",
             n_labels=6,
             **kwargs)

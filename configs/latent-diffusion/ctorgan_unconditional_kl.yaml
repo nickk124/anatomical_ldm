@@ -1,4 +1,6 @@
 # Unconditional LDM baseline for CT Organ dataset
+
+
 model:
   base_learning_rate: 1.0e-06
   target: ldm.models.diffusion.ddpm.LatentDiffusion
@@ -69,7 +71,7 @@ data:
     num_workers: 5
     wrap: False
     train:
-      target: ldm.data.medical_images.CTOrganTrain
+      target: ldm.data.medical_images.CTOrganSmallTrain
       params:
         size: 256
     validation:
