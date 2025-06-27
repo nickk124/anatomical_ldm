@@ -139,7 +139,7 @@ class CTOrganTest(MedicalImagesBase):
 class CTOrganSmallTrain(MedicalImagesBase):
     def __init__(self, **kwargs):
         super().__init__(
-            data_root="../../other_data/ct_organ/images/train_subset_1000",
-            segmentation_root="../../other_data/ct_organ/masks/all/train_subset_1000",
+            data_root="../../other_data/ct_organ_large/images/train_subset_1000",
+            segmentation_root="../../other_data/ct_organ_large/masks/all/train_subset_1000",
             n_labels=6,
             **kwargs)
