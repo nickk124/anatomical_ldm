@@ -47,7 +47,7 @@ model:
       target: ldm.models.autoencoder.AutoencoderKL
       params:
         embed_dim: 3
-        ckpt_path: logs/2024-04-26T16-57-49_autoencoder_kl_64x64x3_ctorgan/checkpoints/last.ckpt
+        ckpt_path: logs/2025-06-20T17-11-10_autoencoder_kl_64x64x3_ctorgan/checkpoints/last.ckpt
         ddconfig:
           double_z: True
           z_channels: 3
