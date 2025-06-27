@@ -71,7 +71,7 @@ data:
     num_workers: 5
     wrap: False
     train:
-      target: ldm.data.medical_images.CTOrganSmallTrain
+      target: ldm.data.medical_images.CTOrganTrain
       params:
         size: 256
     validation:
