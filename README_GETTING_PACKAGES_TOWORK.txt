@@ -2,5 +2,5 @@ After running:
 
 conda env create -f environment.yaml
 conda activate ldm
-
-Follow steps in https://github.com/CompVis/latent-diffusion/issues/207.
+pip install packaging==21.3
+pip install 'torchmetrics<0.8'
