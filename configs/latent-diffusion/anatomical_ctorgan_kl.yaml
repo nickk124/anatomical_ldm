@@ -107,3 +107,4 @@ lightning:
 
   trainer:
     benchmark: True
+    max_epochs: 400  # Extended training for better anatomical learning
