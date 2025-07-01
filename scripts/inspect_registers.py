@@ -29,7 +29,7 @@ def inspect_model_registers(config_path, checkpoint_path):
     
     # Get register module
     registers = model.model.diffusion_model.anatomical_registers
-    register_bank = registers.register_bank
+    register_bank = registers.registers
     
     # Basic stats
     print("📊 Register Statistics:")

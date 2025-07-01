@@ -37,7 +37,7 @@ def analyze_register_weights(model):
     registers = model.model.diffusion_model.anatomical_registers
     
     # Get register bank weights
-    register_bank = registers.register_bank.detach().cpu().numpy()
+    register_bank = registers.registers.detach().cpu().numpy()
     num_classes, num_registers, dim = register_bank.shape
     
     print(f"\nRegister Bank Shape: {register_bank.shape}")
